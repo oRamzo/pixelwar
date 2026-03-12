@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.shape.*?>
+<?import javafx.scene.text.*?>
+<?import javafx.geometry.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="GrilleController"
+            prefWidth="900" prefHeight="650">
+
+    <!-- ===== BARRE DU HAUT ===== -->
+    <top>
+        <VBox>
+            <!-- Barre principale -->
+            <HBox alignment="CENTER_LEFT" spacing="20"
+                  style="-fx-border-color: #cccccc; -fx-border-width: 0 0 1 0; -fx-padding: 10 15 10 15; -fx-background-color: white;">
+
+                <!-- Pseudo + statut (gauche) -->
+                <VBox alignment="CENTER_LEFT" spacing="4" minWidth="150">
+                    <Label fx:id="labelPseudo" text="Pseudo"
+                           style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+                    <HBox alignment="CENTER_LEFT" spacing="6">
+                        <Circle fx:id="cercleStatut" radius="6" fill="green"/>
+                        <Label fx:id="labelStatut" text="Connecté"
+                               style="-fx-font-size: 12px; -fx-text-fill: green;"/>
+                    </HBox>
+                </VBox>
+
+                <!-- Séparateur vertical -->
+                <Separator orientation="VERTICAL" prefHeight="50"/>
+
+                <!-- Couleur sélectionnée -->
+                <VBox alignment="CENTER_LEFT" spacing="4">
+                    <Label text="Couleur sélectionnée :"
+                           style="-fx-font-size: 12px; -fx-text-fill: #555555;"/>
+                    <HBox alignment="CENTER_LEFT" spacing="8">
+                        <Rectangle fx:id="rectCouleurSelectionnee"
+                                   width="28" height="28"
+                                   fill="#0000cc"
+                                   arcWidth="4" arcHeight="4"
+                                   style="-fx-stroke: #aaaaaa; -fx-stroke-width: 1;"/>
+                        <Label fx:id="labelCouleurSelectionnee" text="Bleu"
+                               style="-fx-font-size: 13px;"/>
+                    </HBox>
+                </VBox>
+
+                <!-- Séparateur vertical -->
+                <Separator orientation="VERTICAL" prefHeight="50"/>
+
+                <!-- Couleurs récentes -->
+                <VBox alignment="CENTER_LEFT" spacing="4">
+                    <Label text="Couleurs récentes :"
+                           style="-fx-font-size: 12px; -fx-text-fill: #555555;"/>
+                    <HBox fx:id="hboxCouleursRecentes" alignment="CENTER_LEFT" spacing="6">
+                        <!-- Les rectangles de couleurs récentes seront ajoutés dynamiquement -->
+                        <Rectangle width="28" height="28" fill="red" arcWidth="4" arcHeight="4"
+                                   style="-fx-stroke: #aaaaaa; -fx-stroke-width: 1;"/>
+                        <Rectangle width="28" height="28" fill="cyan" arcWidth="4" arcHeight="4"
+                                   style="-fx-stroke: #aaaaaa; -fx-stroke-width: 1;"/>
+                        <Rectangle width="28" height="28" fill="green" arcWidth="4" arcHeight="4"
+                                   style="-fx-stroke: #aaaaaa; -fx-stroke-width: 1;"/>
+                        <Rectangle width="28" height="28" fill="orange" arcWidth="4" arcHeight="4"
+                                   style="-fx-stroke: #aaaaaa; -fx-stroke-width: 1;"/>
+                        <Rectangle width="28" height="28" fill="hotpink" arcWidth="4" arcHeight="4"
+                                   style="-fx-stroke: #aaaaaa; -fx-stroke-width: 1;"/>
+                        <Rectangle width="28" height="28" fill="black" arcWidth="4" arcHeight="4"
+                                   style="-fx-stroke: #aaaaaa; -fx-stroke-width: 1;"/>
+                    </HBox>
+                </VBox>
+
+                <!-- Spacer pour pousser le bouton à droite -->
+                <HBox HBox.hgrow="ALWAYS"/>
+
+                <!-- Bouton Déconnexion (droite) -->
+                <Button fx:id="boutonDeconnexion" text="Déconnexion"
+                        onAction="#handleDeconnexion"
+                        style="-fx-font-size: 13px; -fx-padding: 8 16 8 16; -fx-cursor: hand;"/>
+            </HBox>
+
+            <!-- Bannière de message (cooldown) -->
+            <HBox fx:id="hboxBanniere" alignment="CENTER"
+                  style="-fx-background-color: #fff3cd; -fx-border-color: #ffc107; -fx-border-width: 0 0 1 0; -fx-padding: 8 15 8 15;"
+                  visible="false" managed="false">
+                <Label fx:id="labelBanniere" text=""
+                       style="-fx-font-size: 13px; -fx-text-fill: #856404;"/>
+            </HBox>
+        </VBox>
+    </top>
+
+    <!-- ===== GRILLE CENTRALE ===== -->
+    <center>
+        <ScrollPane fitToWidth="true" fitToHeight="true"
+                    style="-fx-background-color: white; -fx-border-color: transparent;">
+            <GridPane fx:id="grille"
+                      alignment="CENTER"
+                      style="-fx-background-color: white; -fx-padding: 10;"
+                      hgap="0" vgap="0">
+                <!-- Les cellules sont générées dynamiquement dans GrilleController -->
+            </GridPane>
+        </ScrollPane>
+    </center>
+
+</BorderPane>
