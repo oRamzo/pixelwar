@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Rectangle?>
+
+<VBox xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.pixelwar.client.ConnexionController"
+      alignment="CENTER"
+      spacing="0"
+      style="-fx-background-color: #1a1a2e;">
+
+    <!-- Titre -->
+    <VBox alignment="CENTER" spacing="6">
+        <padding><Insets top="30" bottom="20"/></padding>
+        <Label text="🎨 Pixel War"
+               style="-fx-font-size: 36px; -fx-font-weight: bold; -fx-text-fill: #3A86FF;"/>
+        <Label text="Jeu de coloriage multijoueur en temps réel"
+               style="-fx-font-size: 13px; -fx-text-fill: #6c7a96;"/>
+    </VBox>
+
+    <!-- Formulaire -->
+    <VBox spacing="14"
+          style="-fx-background-color: #16213e; -fx-padding: 28; -fx-background-radius: 12;
+                 -fx-border-color: #2a2f4e; -fx-border-radius: 12; -fx-border-width: 1;"
+          maxWidth="360">
+
+        <!-- Pseudo -->
+        <VBox spacing="5">
+            <Label text="Pseudo" style="-fx-text-fill: #a8b2d8; -fx-font-size: 12;"/>
+            <TextField fx:id="fieldPseudo" promptText="Votre pseudo"
+                       style="-fx-background-color: #0d1b3e; -fx-text-fill: white;
+                              -fx-prompt-text-fill: #4a5568; -fx-background-radius: 6;
+                              -fx-border-color: #2a3f6f; -fx-border-radius: 6;
+                              -fx-padding: 8 12;"/>
+        </VBox>
+
+        <!-- Adresse -->
+        <VBox spacing="5">
+            <Label text="Adresse du serveur" style="-fx-text-fill: #a8b2d8; -fx-font-size: 12;"/>
+            <TextField fx:id="fieldAdresse" promptText="localhost"
+                       style="-fx-background-color: #0d1b3e; -fx-text-fill: white;
+                              -fx-prompt-text-fill: #4a5568; -fx-background-radius: 6;
+                              -fx-border-color: #2a3f6f; -fx-border-radius: 6;
+                              -fx-padding: 8 12;"/>
+        </VBox>
+
+        <!-- Port -->
+        <VBox spacing="5">
+            <Label text="Port" style="-fx-text-fill: #a8b2d8; -fx-font-size: 12;"/>
+            <TextField fx:id="fieldPort" promptText="12345"
+                       style="-fx-background-color: #0d1b3e; -fx-text-fill: white;
+                              -fx-prompt-text-fill: #4a5568; -fx-background-radius: 6;
+                              -fx-border-color: #2a3f6f; -fx-border-radius: 6;
+                              -fx-padding: 8 12;"/>
+        </VBox>
+
+        <!-- Bouton -->
+        <Button fx:id="boutonConnexion" text="Se connecter" onAction="#onConnexion"
+                maxWidth="Infinity"
+                style="-fx-background-color: #3A86FF; -fx-text-fill: white;
+                       -fx-font-weight: bold; -fx-font-size: 14; -fx-background-radius: 6;
+                       -fx-padding: 10; -fx-cursor: hand;"/>
+
+        <!-- Message d'erreur -->
+        <Label fx:id="labelErreur" text="" wrapText="true"
+               style="-fx-text-fill: #ff6b6b; -fx-font-size: 12;" maxWidth="320"/>
+
+    </VBox>
+
+    <Region VBox.vgrow="ALWAYS" maxHeight="20"/>
+
+    <Label text="Pixel War — Projet RIP-IHM 2025-2026"
+           style="-fx-text-fill: #3a4060; -fx-font-size: 10;">
+        <VBox.margin><Insets bottom="10"/></VBox.margin>
+    </Label>
+
+</VBox>

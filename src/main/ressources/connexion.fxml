@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.*?>
+
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="ConnexionController"
+            prefWidth="900" prefHeight="650"
+            style="-fx-background-color: #f5f5f5;"
+            stylesheets="@style.css">
+
+    <center>
+        <VBox alignment="CENTER" spacing="30"
+              maxWidth="400"
+              style="-fx-background-color: white;
+                     -fx-padding: 40 50 40 50;
+                     -fx-border-color: #dddddd;
+                     -fx-border-radius: 8;
+                     -fx-background-radius: 8;">
+
+            <!--titre page-->
+            <Label text="Connexion"
+                   style="-fx-font-size: 24px; -fx-font-weight: bold;"/>
+
+            <!--zone pseudo-->
+            <VBox spacing="4">
+                <Label text="Pseudo"
+                       style="-fx-font-size: 13px; -fx-text-fill: #444444;"/>
+                <TextField fx:id="fieldPseudo"
+                           promptText="Votre pseudo"
+                           style="-fx-font-size: 13px; -fx-padding: 8;"/>
+                <Label fx:id="erreurPseudo" text=""
+                       style="-fx-text-fill: red; -fx-font-size: 11px;"
+                       visible="false" managed="false"/>
+            </VBox>
+
+                     <!--zone adresse serveur-->
+            <VBox spacing="4">
+                <Label text="Adresse du serveur"
+                       style="-fx-font-size: 13px; -fx-text-fill: #444444;"/>
+                <TextField fx:id="fieldAdresse"
+                           promptText="ex: 127.0.0.1"
+                           style="-fx-font-size: 13px; -fx-padding: 8;"/>
+                <Label fx:id="erreurAdresse" text=""
+                       style="-fx-text-fill: red; -fx-font-size: 11px;"
+                       visible="false" managed="false"/>
+            </VBox>
+
+                     <!--zone port-->
+            <VBox spacing="4">
+                <Label text="Port"
+                       style="-fx-font-size: 13px; -fx-text-fill: #444444;"/>
+                <TextField fx:id="fieldPort"
+                           promptText="ex: 7777"
+                           style="-fx-font-size: 13px; -fx-padding: 8;"/>
+                <Label fx:id="erreurPort" text=""
+                       style="-fx-text-fill: red; -fx-font-size: 11px;"
+                       visible="false" managed="false"/>
+            </VBox>
+
+            <!--erreur globale ex serveur inaccessible-->
+            <Label fx:id="erreurGenerale" text=""
+                   style="-fx-text-fill: red; -fx-font-size: 12px; -fx-font-weight: bold;"
+                   visible="false" managed="false"
+                   wrapText="true" maxWidth="300"/>
+
+            <!--bouton connexion-->
+            <Button fx:id="boutonConnexion"
+                    text="Se connecter"
+                    onAction="#handleConnexion"
+                    maxWidth="Infinity"
+                    style="-fx-font-size: 14px; -fx-padding: 10; -fx-cursor: hand;"/>
+
+        </VBox>
+    </center>
+
+</BorderPane>
