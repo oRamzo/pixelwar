@@ -100,9 +100,9 @@ public class GrilleController implements Initializable {
         apercu.setArcHeight(4);
         apercu.setStroke(Color.LIGHTGRAY);
 
-        Slider sliderT = creerSlider(0, 360, couleurSelectionnee.getTeinte());
+        Slider sliderT = creerSlider(0, 360, couleurSelectionnee.getHue());
         Slider sliderS = creerSlider(0, 1,   couleurSelectionnee.getSaturation());
-        Slider sliderL = creerSlider(0, 1,   couleurSelectionnee.getLuminosite());
+        Slider sliderL = creerSlider(0, 1,   couleurSelectionnee.getBrightness());
 
         Label lT = new Label("Teinte");
         Label lS = new Label("Saturation");
@@ -150,6 +150,10 @@ public class GrilleController implements Initializable {
     }
 
     private void demarrerCooldownJoueur() {
+        if (timerBannierePixel != null) {
+            timerBannierePixel.cancel();
+            timerBannierePixel = null;
+        }
         cooldownJoueur = COOLDOWN_JOUEUR_SEC;
         setGrilleDesactivee(true);
         afficherBanniereJoueur(cooldownJoueur);
@@ -211,6 +215,7 @@ public class GrilleController implements Initializable {
     private java.util.Timer timerBannierePixel = null;
 
     private void afficherBannierePixelAvecTimer(int ligne, int col) {
+        if (cooldownJoueur > 0) return;
         if (timerBannierePixel != null) { timerBannierePixel.cancel(); timerBannierePixel = null; }
         afficherBannierePixel(cooldownPixels[ligne][col]);
         timerBannierePixel = new java.util.Timer();
@@ -351,7 +356,9 @@ public class GrilleController implements Initializable {
     public void recevoirBusy(int ligne, int col, int secondesRestantes) {
         cooldownPixels[ligne][col] = secondesRestantes;
         demarrerCooldownPixel(ligne, col);
-        afficherBannierePixelAvecTimer(ligne, col);
+        if (cooldownJoueur <= 0 ) {
+            afficherBannierePixelAvecTimer(ligne, col);
+        }
     }
 
     //recevoir message d'erreur reseau
