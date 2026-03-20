@@ -9,26 +9,28 @@ import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- *serveur tcp principal du jeu pixel battle
- *lancement : java server <port>
- *
- *protocole texte 1 ligne = 1 message
- *client -> serveur
- *  connect <pseudo>
- *  pixel <row> <col> <#rrggbb>
- *  disconnect
- *
- *serveur -> client
- *  update <row> <col> <#rrggbb> <pseudo>
- *  state <row> <col> <#rrggbb> <secondesrestantes>
- *  busy <row> <col> <secondesrestantes>
- *  error <message>
- */
+//serveur tcp principal du jeu pixel battle
+//run : java Server <port>
+//
+//proto texte (1 ligne = 1 message)
+//client -> serveur
+//  connect <pseudo>
+//  pixel <row> <col> <#rrggbb>
+//  disconnect
+//
+//serveur -> client
+//  connected <pseudo>
+//  update <row> <col> <#rrggbb> <pseudo>
+//  state <row> <col> <#rrggbb> <secondesrestantes>
+//  busy <row> <col> <secondesrestantes>
+//  error <message>
 public class Server {
 
     //constantes
-    private static final int COOLDOWN_PIXEL_MS = 60_000; //1 minute en millisecondes
+    private static final int COOLDOWN_PIXEL_MS = 60000; //1 minute en millisecondes
+    //temps max d'attente pour qu'un pseudo soit libere après deconnexion (en ms) 
+    //(pour eviter que quelqu'un se connecte avec un pseudo deja utilise pendant que le serveur traite la deconnexion du pseudo en question)
+    private static final int ATTENTE_LIBERATION_PSEUDO_MS = 1200; 
 
     //etat partage entre threads
 
@@ -41,7 +43,7 @@ public class Server {
     //couleur actuelle par case : row,col -> #rrggbb
     private final Map<String, String> pixelCouleurs = new ConcurrentHashMap<>();
 
-    //verrou logique pour synchroniser snapshot initial et ecritures pixels
+    //verrou pour etat initial + ecritures pixels
     private final Object etatLock = new Object();
 
     //demarrage
@@ -57,17 +59,6 @@ public class Server {
             }
         } catch (IOException e) {
             log("Erreur serveur : " + e.getMessage());
-        }
-    }
-
-    //diffusion clients
-
-    //envoie a tout le monde sauf expediteur
-    private void diffuser(String message, String pseudoExpéditeur) {
-        for (Map.Entry<String, ClientHandler> entry : clients.entrySet()) {
-            if (!entry.getKey().equals(pseudoExpéditeur)) {
-                entry.getValue().envoyer(message);
-            }
         }
     }
 
@@ -89,9 +80,9 @@ public class Server {
         String cle = clePixel(row, col);
         Long timestamp = pixelTimestamps.get(cle);
         if (timestamp == null) return 0;
-        long ecoulé = System.currentTimeMillis() - timestamp;
-        if (ecoulé >= COOLDOWN_PIXEL_MS) return 0;
-        return (int) ((COOLDOWN_PIXEL_MS - ecoulé) / 1000) + 1;
+        long temps_ecoule = System.currentTimeMillis() - timestamp;
+        if (temps_ecoule >= COOLDOWN_PIXEL_MS) return 0;
+        return (int) ((COOLDOWN_PIXEL_MS - temps_ecoule) / 1000) + 1;
     }
 
     //marque case comme utilisee maintenant
@@ -99,7 +90,7 @@ public class Server {
         pixelTimestamps.put(clePixel(row, col), System.currentTimeMillis());
     }
 
-    //envoie l'etat courant de la grille a un client
+    //envoie etat grille au client
     private void envoyerEtatInitial(ClientHandler handler) {
         for (Map.Entry<String, String> entry : pixelCouleurs.entrySet()) {
             String[] coords = entry.getKey().split(",");
@@ -122,7 +113,7 @@ public class Server {
         System.out.println("[" + heure + "] " + message);
     }
 
-    //handler client thread
+    //handler client
 
     private class ClientHandler implements Runnable {
 
@@ -170,14 +161,18 @@ public class Server {
                             break;
                         }
 
-                        String pseudoDemande = parts[1].trim();
+                        String pseudoDemande = message.substring("CONNECT".length()).trim();
                         if (pseudoDemande.isEmpty()) {
                             envoyer("ERROR Pseudo manquant.");
                             break;
                         }
 
-                        ClientHandler dejaPresent = clients.putIfAbsent(pseudoDemande, this);
-                        if (dejaPresent != null) {
+                        if (pseudoDemande.matches(".*\\s+.*")) { //regex trouvé en ligne pour verif presence d'espaces dans pseudo
+                            envoyer("ERROR Le pseudo ne doit pas contenir d'espaces.");
+                            break;
+                        }
+
+                        if (!reserverPseudoAvecAttente(pseudoDemande)) {
                             envoyer("ERROR Pseudo déjà utilisé.");
                             log("Connexion refusée (pseudo déjà utilisé) : "
                                 + pseudoDemande + " (" + socket.getInetAddress() + ")");
@@ -186,6 +181,7 @@ public class Server {
                         }
 
                         pseudo = pseudoDemande;
+                        envoyer("CONNECTED " + pseudo);
                         synchronized (etatLock) {
                             envoyerEtatInitial(this);
                         }
@@ -203,31 +199,31 @@ public class Server {
                     }
                     if (parts.length >= 4) {
                         try {
-                            int row    = Integer.parseInt(parts[1]);
-                            int col    = Integer.parseInt(parts[2]);
+                            int ligne = Integer.parseInt(parts[1]);
+                            int col = Integer.parseInt(parts[2]);
                             String hex = parts[3];
 
                             int restant;
                             String update = null;
                             synchronized (etatLock) {
-                                restant = secondesRestantes(row, col);
+                                restant = secondesRestantes(ligne, col);
                                 if (restant <= 0) {
-                                    reserverPixel(row, col);
-                                    pixelCouleurs.put(clePixel(row, col), hex);
+                                    reserverPixel(ligne, col);
+                                    pixelCouleurs.put(clePixel(ligne, col), hex);
                                     update = String.format("UPDATE %d %d %s %s",
-                                        row, col, hex, pseudo);
+                                        ligne, col, hex, pseudo);
                                 }
                             }
 
                             if (restant > 0) {
                                 //case encore en cooldown => refus
-                                envoyer(String.format("BUSY %d %d %d", row, col, restant));
-                                log("BUSY pixel (" + row + "," + col + ") pour " + pseudo
+                                envoyer(String.format("BUSY %d %d %d", ligne, col, restant));
+                                log("BUSY pixel (" + ligne + "," + col + ") pour " + pseudo
                                     + " — " + restant + "s restantes");
                             } else {
                                 //case libre => accepte puis diffuse a tous
                                 diffuserATous(update); //inclut expediteur
-                                log("PIXEL (" + row + "," + col + ") " + hex
+                                log("PIXEL (" + ligne + "," + col + ") " + hex
                                     + " par " + pseudo);
                             }
                         } catch (NumberFormatException e) {
@@ -247,6 +243,26 @@ public class Server {
                     envoyer("ERROR Message inconnu : " + parts[0]);
                     log("Message inconnu de " + pseudo + " : " + message);
                     break;
+            }
+        }
+
+        private boolean reserverPseudoAvecAttente(String pseudoDemande) {
+            long deadline = System.currentTimeMillis() + ATTENTE_LIBERATION_PSEUDO_MS;
+
+            while (true) {
+                ClientHandler existant = clients.putIfAbsent(pseudoDemande, this);
+                if (existant == null || existant == this) {
+                    return true;
+                }
+
+                if (existant.socket.isClosed()) {
+                    clients.remove(pseudoDemande, existant);
+                    continue;
+                }
+
+                if (System.currentTimeMillis() >= deadline) {
+                    return false;
+                }
             }
         }
 

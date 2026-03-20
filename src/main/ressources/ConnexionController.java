@@ -9,6 +9,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
+import java.io.IOException;
 import java.net.URL;
 import java.util.ResourceBundle;
 
@@ -62,6 +63,9 @@ public class ConnexionController implements Initializable {
         if (pseudo.isEmpty()) {
             afficherErreur(erreurPseudo, "Le pseudo ne peut pas être vide.");
             valide = false;
+        } else if (pseudo.matches(".*\\s+.*")) { //regex trouvé en ligne pour verif presence d'espaces dans pseudo
+            afficherErreur(erreurPseudo, "Le pseudo ne doit pas contenir d'espaces.");
+            valide = false;
         } else if (pseudo.length() > 20) {
             afficherErreur(erreurPseudo, "Le pseudo ne doit pas dépasser 20 caractères.");
             valide = false;
@@ -77,8 +81,8 @@ public class ConnexionController implements Initializable {
         String portTexte = fieldPort.getText().trim();
         try {
             port = Integer.parseInt(portTexte);
-            if (port < 1 || port > 65535) {
-                afficherErreur(erreurPort, "Le port doit être entre 1 et 65535.");
+            if (port < 1 || port > 100000) {
+                afficherErreur(erreurPort, "Le port doit être entre 1 et 100000.");
                 valide = false;
             }
         } catch (NumberFormatException e) {
@@ -103,6 +107,17 @@ public class ConnexionController implements Initializable {
 
                 Platform.runLater(() -> ouvrirGrille(pseudoFinal, networkClient));
 
+            } catch (IOException e) {
+                final String message = (e.getMessage() != null && !e.getMessage().trim().isEmpty())
+                    ? e.getMessage()
+                    : "Impossible de se connecter au serveur. Vérifiez l'adresse et le port.";
+
+                javafx.application.Platform.runLater(() -> {
+                    afficherErreur(erreurGenerale, message);
+                    boutonConnexion.setDisable(false);
+                    boutonConnexion.setText("Se connecter");
+                });
+
             } catch (Exception e) {
                 javafx.application.Platform.runLater(() -> {
                     afficherErreur(erreurGenerale,
@@ -120,18 +135,16 @@ public class ConnexionController implements Initializable {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("grille.fxml"));
             Parent root = loader.load();
-
             GrilleController grilleController = loader.getController();
             grilleController.setPseudo(pseudo);
             grilleController.setNetworkClient(networkClient);
-
             Stage stage = (Stage) boutonConnexion.getScene().getWindow();
             stage.setScene(new Scene(root));
+            stage.setMaximized(true);
         } catch (Exception e) {
             afficherErreur(erreurGenerale, "Erreur lors du chargement de l'interface.");
             boutonConnexion.setDisable(false);
             boutonConnexion.setText("Se connecter");
-            e.printStackTrace();
         }
     }
 

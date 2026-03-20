@@ -1,33 +1,31 @@
 #!/bin/bash
-echo "==============================="
-echo "   Lancement de Pixel War"
-echo "==============================="
-echo
+#Mini- Projet
+#Systemes 2
+#Rami MAHMOUD
+#Rebecca FARAH
+#L3 IFA 1
+#2025/2026
 
-# Chemins
+#chemin vers javafx
 JAVAFX="$HOME/javafx-sdk-21/lib"
+
+#chemin du dossier des sources
 SOURCES="$HOME/pixelwar/src/main/ressources"
 
+#se placer dans le dossier des sources
 cd "$SOURCES"
 
-# Compilation
+#compiler tous les fichiers java
 echo "Compilation en cours..."
 javac --module-path "$JAVAFX" --add-modules javafx.controls,javafx.fxml *.java
 
-if [ $? -ne 0 ]; then
-    echo ""
-    echo "ERREUR : La compilation a echoue."
-    read -p "Appuyez sur Entree pour quitter..."
-    exit 1
-fi
-
-echo "Compilation reussie."
-echo
-
-# Lancement
+#lancer l'application
 echo "Lancement de l'application..."
 java --module-path "$JAVAFX" --add-modules javafx.controls,javafx.fxml App
 
 echo ""
 echo "Application terminee."
-read -p "Appuyez sur Entree pour quitter..."
+
+#pour executer ce script :
+#chmod +x pixelwar.sh
+#./pixelwar.sh

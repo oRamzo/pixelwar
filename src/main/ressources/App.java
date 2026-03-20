@@ -7,12 +7,11 @@ import javafx.stage.Stage;
 public class App extends Application {
 
     @Override
-    public void start(Stage primaryStage) throws Exception {
+    public void start(Stage stagePrincipal) throws Exception {
         Parent root = FXMLLoader.load(getClass().getResource("connexion.fxml"));
-        primaryStage.setTitle("Pixel Battle");
-        primaryStage.setScene(new Scene(root, 900, 650));
-        primaryStage.setResizable(false);
-        primaryStage.show();
+        stagePrincipal.setTitle("PixelWar");
+        stagePrincipal.setScene(new Scene(root, 900, 650));
+        stagePrincipal.show();
     }
 
     public static void main(String[] args) {
@@ -21,11 +20,9 @@ public class App extends Application {
 }
 
 
-/**
- * Compiler en faisant :
- * javac --module-path ~/javafx-sdk-21/lib --add-modules javafx.controls,javafx.fxml *.java
- * Executer en faisant : 
- * java --module-path ~/javafx-sdk-21/lib --add-modules javafx.controls,javafx.fxml App
- * Demarrer le serveur en faisant :
- * java Server 7777
- */
+//compile :
+//javac --module-path ~/javafx-sdk-21/lib --add-modules javafx.controls,javafx.fxml *.java
+//run app :
+//java --module-path ~/javafx-sdk-21/lib --add-modules javafx.controls,javafx.fxml App
+//run serveur :
+//java Server 7777

@@ -18,10 +18,10 @@ import java.util.ResourceBundle;
 public class GrilleController implements Initializable {
 
     //parametres fixes de grille
-    private static final int COLS         = 55;
-    private static final int ROWS         = 27;
-    private static final int CELL_SIZE    = 30;
-    private static final int MAX_RECENTS  = 5;
+    private static final int cols         = 55;
+    private static final int lignes         = 27;
+    private static final int taille_pixel    = 30;
+    private static final int MAX_RECENTS  = 20;
     private static final int COOLDOWN_JOUEUR_SEC = 30; //secondes
     private static final int COOLDOWN_PIXEL_SEC  = 60; //1 minute
 
@@ -43,21 +43,21 @@ public class GrilleController implements Initializable {
     private final List<Color> couleursRecentes = new ArrayList<>();
 
     //cases affichees dans grille
-    private Rectangle[][] cellules = new Rectangle[ROWS][COLS];
+    private Rectangle[][] cellules = new Rectangle[lignes][cols];
 
     //cooldown global joueur -1 libre
     private int cooldownJoueur = -1;
     private java.util.Timer timerJoueur = null;
 
-    //cooldown par case secondes restantes -1 libre
-    private int[][] cooldownPixels = new int[ROWS][COLS];
+    //cooldown par case pour secondes restantes, sinon -1 si libre
+    private int[][] cooldownPixels = new int[lignes][cols];
 
     private NetworkClient networkClient;
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
-        for (int r = 0; r < ROWS; r++)
-            for (int c = 0; c < COLS; c++)
+        for (int r = 0; r < lignes; r++)
+            for (int c = 0; c < cols; c++)
                 cooldownPixels[r][c] = -1;
         construireGrille();
         ajouterColorPicker();
@@ -68,15 +68,15 @@ public class GrilleController implements Initializable {
 
     private void construireGrille() {
         grille.getChildren().clear();
-        for (int r = 0; r < ROWS; r++) {
-            for (int c = 0; c < COLS; c++) {
-                Rectangle cell = new Rectangle(CELL_SIZE, CELL_SIZE);
+        for (int r = 0; r < lignes; r++) {
+            for (int c = 0; c < cols; c++) {
+                Rectangle cell = new Rectangle(taille_pixel, taille_pixel);
                 cell.setFill(Color.WHITE);
                 cell.setStroke(Color.LIGHTGRAY);
                 cell.setStrokeWidth(0.5);
-                final int row = r;
+                final int ligne = r;
                 final int col = c;
-                cell.setOnMouseClicked(e -> handleClicPixel(row, col));
+                cell.setOnMouseClicked(e -> handleClicPixel(ligne, col));
                 cell.setStyle("-fx-cursor: hand;");
                 cellules[r][c] = cell;
                 grille.add(cell, c, r);
@@ -84,12 +84,12 @@ public class GrilleController implements Initializable {
         }
     }
 
-    // Selecteur couleur inline — pas de dialogue systeme donc pas de freeze
+    //selecteur couleur inline
     private void ajouterColorPicker() {
         Button btnOuvrir = new Button("\uD83C\uDFA8 Choisir");
         btnOuvrir.setStyle("-fx-font-size: 11px; -fx-cursor: hand;");
 
-        javafx.scene.layout.VBox selecteur = new javafx.scene.layout.VBox(6);
+        javafx.scene.layout.VBox selecteur = new javafx.scene.layout.VBox(6); //Vbox pour vertical box
         selecteur.setStyle("-fx-background-color: white; -fx-border-color: #cccccc; "
                          + "-fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 10;");
         selecteur.setVisible(false);
@@ -100,26 +100,26 @@ public class GrilleController implements Initializable {
         apercu.setArcHeight(4);
         apercu.setStroke(Color.LIGHTGRAY);
 
-        Slider sliderH = creerSlider(0, 360, couleurSelectionnee.getHue());
+        Slider sliderT = creerSlider(0, 360, couleurSelectionnee.getTeinte());
         Slider sliderS = creerSlider(0, 1,   couleurSelectionnee.getSaturation());
-        Slider sliderB = creerSlider(0, 1,   couleurSelectionnee.getBrightness());
+        Slider sliderL = creerSlider(0, 1,   couleurSelectionnee.getLuminosite());
 
-        Label lH = new Label("Teinte");
+        Label lT = new Label("Teinte");
         Label lS = new Label("Saturation");
-        Label lB = new Label("Luminosite");
-        for (Label l : new Label[]{lH, lS, lB})
+        Label lL = new Label("Luminosite");
+        for (Label l : new Label[]{lT, lS, lL})
             l.setStyle("-fx-font-size: 10px; -fx-text-fill: #666666;");
 
         Runnable miseAJour = () -> {
-            Color c = Color.hsb(sliderH.getValue(), sliderS.getValue(), sliderB.getValue());
+            Color c = Color.hsb(sliderT.getValue(), sliderS.getValue(), sliderL.getValue());
             apercu.setFill(c);
             setCouleurSelectionnee(c);
         };
-        sliderH.valueProperty().addListener((obs, o, n) -> miseAJour.run());
+        sliderT.valueProperty().addListener((obs, o, n) -> miseAJour.run());
         sliderS.valueProperty().addListener((obs, o, n) -> miseAJour.run());
-        sliderB.valueProperty().addListener((obs, o, n) -> miseAJour.run());
+        sliderL.valueProperty().addListener((obs, o, n) -> miseAJour.run());
 
-        selecteur.getChildren().addAll(apercu, lH, sliderH, lS, sliderS, lB, sliderB);
+        selecteur.getChildren().addAll(apercu, lT, sliderT, lS, sliderS, lL, sliderL);
 
         btnOuvrir.setOnAction(e -> {
             boolean ouvert = !selecteur.isVisible();
@@ -127,26 +127,26 @@ public class GrilleController implements Initializable {
             selecteur.setManaged(ouvert);
         });
 
-        hboxCouleurSelectionnee.getChildren().addAll(btnOuvrir, selecteur);
+        hboxCouleurSelectionnee.getChildren().addAll(btnOuvrir, selecteur); //hbox pour horizontal box
     }
 
     private Slider creerSlider(double min, double max, double valeur) {
         Slider s = new Slider(min, max, valeur);
-        s.setPrefWidth(180);
+        s.setPrefWidth(180); //largeur slider
         return s;
     }
 
-    private void handleClicPixel(int row, int col) {
+    private void handleClicPixel(int ligne, int col) {
         if (cooldownJoueur > 0) return;
-        if (cooldownPixels[row][col] > 0) {
-            afficherBannierePixelAvecTimer(row, col);
+        if (cooldownPixels[ligne][col] > 0) {
+            afficherBannierePixelAvecTimer(ligne, col);
             return;
         }
-        cellules[row][col].setFill(couleurSelectionnee);
+        cellules[ligne][col].setFill(couleurSelectionnee);
         ajouterCouleurRecente(couleurSelectionnee);
         demarrerCooldownJoueur();
         if (networkClient != null)
-            networkClient.envoyerPixel(row, col, couleurSelectionnee);
+            networkClient.envoyerPixel(ligne, col, couleurSelectionnee);
     }
 
     private void demarrerCooldownJoueur() {
@@ -167,40 +167,41 @@ public class GrilleController implements Initializable {
                     Platform.runLater(() -> afficherBanniereJoueur(restant));
                 }
             }
-        }, 1000, 1000);
+        }, 1000, 1000); //delai 1s, periode 1s
     }
 
-    public void recevoirPixelDistant(int row, int col, Color couleur, boolean estMoi) {
-        appliquerEtatPixel(row, col, couleur, COOLDOWN_PIXEL_SEC);
+    //recevoir update pixel d'un autre joueur
+    public void recevoirPixelDistant(int ligne, int col, Color couleur, boolean estMoi) {
+        appliquerEtatPixel(ligne, col, couleur, COOLDOWN_PIXEL_SEC);
     }
-
-    public void appliquerEtatInitialPixel(int row, int col, Color couleur, int secondesRestantes) {
-        appliquerEtatPixel(row, col, couleur, secondesRestantes);
+    //recevoir etat initial grille apres connexion
+    public void appliquerEtatInitialPixel(int ligne, int col, Color couleur, int secondesRestantes) {
+        appliquerEtatPixel(ligne, col, couleur, secondesRestantes);
     }
-
-    private void appliquerEtatPixel(int row, int col, Color couleur, int secondesRestantes) {
-        if (!estCoordonneeValide(row, col)) return;
-        cellules[row][col].setFill(couleur);
+    //recevoir update pixel apres tentative de colorier, mais pixel deja pris
+    private void appliquerEtatPixel(int ligne, int col, Color couleur, int secondesRestantes) {
+        if (!estCoordonneeValide(ligne, col)) return;
+        cellules[ligne][col].setFill(couleur);
         if (secondesRestantes > 0) {
-            cooldownPixels[row][col] = secondesRestantes;
-            demarrerCooldownPixel(row, col);
+            cooldownPixels[ligne][col] = secondesRestantes;
+            demarrerCooldownPixel(ligne, col);
         } else {
-            cooldownPixels[row][col] = -1;
+            cooldownPixels[ligne][col] = -1;
         }
     }
 
-    private boolean estCoordonneeValide(int row, int col) {
-        return row >= 0 && row < ROWS && col >= 0 && col < COLS;
+    private boolean estCoordonneeValide(int ligne, int col) {
+        return ligne >= 0 && ligne < lignes && col >= 0 && col < cols;
     }
 
-    private void demarrerCooldownPixel(int row, int col) {
+    private void demarrerCooldownPixel(int ligne, int col) {
         java.util.Timer t = new java.util.Timer();
         t.scheduleAtFixedRate(new java.util.TimerTask() {
             @Override
             public void run() {
-                cooldownPixels[row][col]--;
-                if (cooldownPixels[row][col] <= 0) {
-                    cooldownPixels[row][col] = -1;
+                cooldownPixels[ligne][col]--;
+                if (cooldownPixels[ligne][col] <= 0) {
+                    cooldownPixels[ligne][col] = -1;
                     t.cancel();
                 }
             }
@@ -209,14 +210,14 @@ public class GrilleController implements Initializable {
 
     private java.util.Timer timerBannierePixel = null;
 
-    private void afficherBannierePixelAvecTimer(int row, int col) {
+    private void afficherBannierePixelAvecTimer(int ligne, int col) {
         if (timerBannierePixel != null) { timerBannierePixel.cancel(); timerBannierePixel = null; }
-        afficherBannierePixel(cooldownPixels[row][col]);
+        afficherBannierePixel(cooldownPixels[ligne][col]);
         timerBannierePixel = new java.util.Timer();
         timerBannierePixel.scheduleAtFixedRate(new java.util.TimerTask() {
             @Override
             public void run() {
-                int restant = cooldownPixels[row][col];
+                int restant = cooldownPixels[ligne][col];
                 if (restant <= 0) {
                     timerBannierePixel.cancel();
                     timerBannierePixel = null;
@@ -230,7 +231,7 @@ public class GrilleController implements Initializable {
 
     private void afficherBanniereJoueur(int secondesRestantes) {
         labelBanniere.setText(
-            String.format("Vous ne pouvez pas colorier pour l'instant. Attente : %d seconde%s.",
+            String.format("Vous ne pouvez pas colorier pour l'instant. Il faut attendre : %d seconde%s.",
                 secondesRestantes, secondesRestantes > 1 ? "s" : ""));
         hboxBanniere.setVisible(true);
         hboxBanniere.setManaged(true);
@@ -270,6 +271,7 @@ public class GrilleController implements Initializable {
         }
     }
 
+    //mise a jour de la couleur selectionnee apres choix dans ui
     private void setCouleurSelectionnee(Color couleur) {
         couleurSelectionnee = couleur;
         rectCouleurSelectionnee.setFill(couleur);
@@ -293,7 +295,9 @@ public class GrilleController implements Initializable {
         }
     }
 
-    public void setPseudo(String pseudo) { labelPseudo.setText(pseudo); }
+    public void setPseudo(String pseudo) {
+        labelPseudo.setText(pseudo);
+    }
 
     private String couleurVersNom(Color c) {
         if (c.equals(Color.RED))    return "Rouge";
@@ -305,27 +309,52 @@ public class GrilleController implements Initializable {
         if (c.equals(Color.CYAN))   return "Cyan";
         if (c.equals(Color.HOTPINK))return "Rose";
         return String.format("#%02X%02X%02X",
-            (int)(c.getRed()*255), (int)(c.getGreen()*255), (int)(c.getBlue()*255));
+            (int)(c.getRed()*255), (int)(c.getGreen()*255), (int)(c.getBlue()*255)); //%02X pour hex sur 2 cararcteres (en majuscule)
     }
 
+    //nettoyage timers
+    public void cleanup() {
+        if (timerJoueur != null) {
+            timerJoueur.cancel();
+            timerJoueur = null;
+        }
+        if (timerBannierePixel != null) {
+            timerBannierePixel.cancel();
+            timerBannierePixel = null;
+        }
+    }
+
+    //deconnexion et retour a la page de connexion
     @FXML
     private void handleDeconnexion() {
-        if (networkClient != null) networkClient.deconnecter();
+        cleanup();
+        if (networkClient != null)
+            networkClient.deconnecter();
         try {
             javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(
                 getClass().getResource("connexion.fxml"));
             javafx.scene.Parent root = loader.load();
-            javafx.stage.Stage stage = (javafx.stage.Stage) boutonDeconnexion.getScene().getWindow();
-            stage.setScene(new javafx.scene.Scene(root));
-        } catch (Exception e) { e.printStackTrace(); }
+            javafx.stage.Stage stage =
+                (javafx.stage.Stage) boutonDeconnexion.getScene().getWindow();
+            
+            //sort du plein ecran avant changement de scene
+            stage.setFullScreen(false);
+            stage.setMaximized(false);
+            
+            stage.setScene(new javafx.scene.Scene(root, 900, 650));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
+    //recevoir message de pixel en cooldown apres tentative de colorier
+    public void recevoirBusy(int ligne, int col, int secondesRestantes) {
+        cooldownPixels[ligne][col] = secondesRestantes;
+        demarrerCooldownPixel(ligne, col);
+        afficherBannierePixelAvecTimer(ligne, col);
     }
 
-    public void recevoirBusy(int row, int col, int secondesRestantes) {
-        cooldownPixels[row][col] = secondesRestantes;
-        demarrerCooldownPixel(row, col);
-        afficherBannierePixelAvecTimer(row, col);
-    }
-
+    //recevoir message d'erreur reseau
     public void afficherErreurReseau(String message) {
         setStatutConnecte(false);
         afficherBanniereJoueur(0);
@@ -335,6 +364,7 @@ public class GrilleController implements Initializable {
         labelBanniere.setStyle("-fx-font-size: 13px; -fx-text-fill: #842029;");
     }
 
+    //liaison avec NetworkClient apres connexion pour recevoir les updates du serveur
     public void setNetworkClient(NetworkClient client) {
         this.networkClient = client;
         this.networkClient.setGrilleController(this);

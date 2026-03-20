@@ -1,34 +1,31 @@
 #!/bin/bash
-echo "==============================="
-echo "   Lancement du Serveur Pixel War"
-echo "==============================="
-echo
+#Mini- Projet
+#Systemes 2
+#Rami MAHMOUD
+#Rebecca FARAH
+#L3 IFA 1
+#2025/2026
 
+#chemin du dossier des sources
 SOURCES="$HOME/pixelwar/src/main/ressources"
 
+#se placer dans le dossier des sources
 cd "$SOURCES"
 
-# Port par defaut 7777 si pas de parametre
+#port par defaut 7777 si pas de parametre
 PORT=${1:-7777}
 
-# Compilation
+#compiler le serveur
 echo "Compilation en cours..."
 javac Server.java
 
-if [ $? -ne 0 ]; then
-    echo ""
-    echo "ERREUR : La compilation a echoue."
-    read -p "Appuyez sur Entree pour quitter..."
-    exit 1
-fi
-
-echo "Compilation reussie."
-echo
-
-# Lancement
+#lancer le serveur
 echo "Lancement du serveur sur le port $PORT..."
 java Server "$PORT"
 
 echo ""
 echo "Serveur arrete."
-read -p "Appuyez sur Entree pour quitter..."    
+
+#pour executer ce script :
+#chmod +x pixelwar_server.sh
+#./pixelwar_server.sh

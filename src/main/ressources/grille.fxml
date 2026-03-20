@@ -13,13 +13,10 @@
 
 <BorderPane prefHeight="650" prefWidth="900" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="GrilleController" stylesheets="@style.css">
 
-    <!--barre haut-->
     <top>
         <VBox>
-            <!--ligne principale-->
             <HBox alignment="CENTER_LEFT" spacing="20" style="-fx-border-color: #cccccc; -fx-border-width: 0 0 1 0; -fx-padding: 10 15 10 15; -fx-background-color: white;">
 
-                <!--pseudo + etat gauche-->
                 <VBox alignment="CENTER_LEFT" minWidth="150" spacing="4">
                     <Label fx:id="labelPseudo" style="-fx-font-size: 14px; -fx-font-weight: bold;" text="Pseudo" />
                     <HBox alignment="CENTER_LEFT" spacing="6">
@@ -28,10 +25,8 @@
                     </HBox>
                 </VBox>
 
-                <!--separateur-->
                 <Separator orientation="VERTICAL" prefHeight="50" />
 
-                <!--couleur selectionnee-->
                 <VBox alignment="CENTER_LEFT" spacing="4">
                     <Label style="-fx-font-size: 12px; -fx-text-fill: #555555;" text="Couleur sélectionnée :" />
                     <HBox fx:id="hboxCouleurSelectionnee" alignment="CENTER_LEFT" spacing="8">
@@ -40,37 +35,29 @@
                     </HBox>
                 </VBox>
 
-                <!--separateur-->
                 <Separator orientation="VERTICAL" prefHeight="50" />
 
-                <!--dernieres couleurs utilisees-->
                 <VBox alignment="CENTER_LEFT" spacing="4">
                     <Label style="-fx-font-size: 12px; -fx-text-fill: #555555;" text="Couleurs récentes :" />
                     <HBox fx:id="hboxCouleursRecentes" alignment="CENTER_LEFT" spacing="6">
-                        <!--rempli dynamiquement dans controller-->
                     </HBox>
                 </VBox>
 
-                <!--espace vide pour pousser bouton a droite-->
                 <HBox HBox.hgrow="ALWAYS" />
             <Separator orientation="VERTICAL" prefHeight="50" />
 
-                <!--bouton deconnexion droite-->
                 <Button fx:id="boutonDeconnexion" onAction="#handleDeconnexion" style="-fx-font-size: 13px; -fx-padding: 8 16 8 16; -fx-cursor: hand;" text="Déconnexion" />
             </HBox>
 
-            <!--bandeau info cooldown message-->
             <HBox fx:id="hboxBanniere" alignment="CENTER" managed="false" style="-fx-background-color: #fff3cd; -fx-border-color: #ffc107; -fx-border-width: 0 0 1 0; -fx-padding: 8 15 8 15;" visible="false">
                 <Label fx:id="labelBanniere" style="-fx-font-size: 13px; -fx-text-fill: #856404;" text="" />
             </HBox>
         </VBox>
     </top>
 
-    <!--zone centrale grille-->
     <center>
         <ScrollPane fitToHeight="true" fitToWidth="true" style="-fx-background-color: white; -fx-border-color: transparent;">
             <GridPane fx:id="grille" alignment="CENTER" hgap="0" style="-fx-background-color: white; -fx-padding: 10;" vgap="0">
-                <!--cases creees dynamiquement dans controller-->
             </GridPane>
         </ScrollPane>
     </center>

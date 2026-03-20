@@ -6,17 +6,20 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 
 //client tcp du jeu
 //ecoute serveur en arriere plan et met a jour ui
 public class NetworkClient {
+
+    private static final int TIMEOUT_HANDSHAKE_MS = 3000;
 
     private Socket socket;
     private PrintWriter out;
     private BufferedReader in;
 
     private GrilleController grilleController;
-    private Thread threadEcoute;
+    private Thread threadEcoute; //thread qui ecoute le serveur en arriere plan
     private boolean connecte = false;
     private String monPseudo;
 
@@ -25,14 +28,39 @@ public class NetworkClient {
     //ouvre connexion tcp et envoie pseudo
     //@throws ioexception si serveur injoignable
     public NetworkClient(String adresse, int port, String pseudo) throws IOException {
-        socket = new Socket(adresse, port);
-        out = new PrintWriter(socket.getOutputStream(), true);
-        in  = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        connecte = true;
-        monPseudo = pseudo;
+        try {
+            socket = new Socket(adresse, port);
+            out = new PrintWriter(socket.getOutputStream(), true);
+            in  = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            connecte = true;
+            monPseudo = pseudo;
 
-        //identification serveur
-        envoyerMessage("CONNECT " + pseudo);
+            //identification serveur + attente validation
+            socket.setSoTimeout(TIMEOUT_HANDSHAKE_MS);
+            envoyerMessage("CONNECT " + pseudo);
+
+            String reponse = in.readLine();
+            if (reponse == null) {
+                throw new IOException("Connexion fermée par le serveur.");
+            }
+            if (reponse.startsWith("ERROR ")) {
+                String erreur = reponse.substring("ERROR ".length()).trim(); //message d'erreur (en enlevant le prefixe "ERROR ")
+                throw new IOException(erreur.isEmpty() ? "Connexion refusée par le serveur." : erreur);
+            }
+            if (!reponse.startsWith("CONNECTED")) {
+                throw new IOException("Réponse inattendue du serveur.");
+            }
+
+            socket.setSoTimeout(0);
+        } catch (SocketTimeoutException e) {
+            connecte = false;
+            fermerSilencieusement();
+            throw new IOException("Le serveur ne répond pas à la connexion.", e);
+        } catch (IOException e) {
+            connecte = false;
+            fermerSilencieusement();
+            throw e;
+        }
     }
 
     //lien avec controller
@@ -65,7 +93,7 @@ public class NetworkClient {
 
     //ecoute serveur
 
-    //lance thread qui lit messages tant que connecte
+    //lance thread qui lit messages tant que connecté
     private void demarrerEcoute() {
         threadEcoute = new Thread(() -> {
             try {
@@ -99,9 +127,9 @@ public class NetworkClient {
                 //format update row col #rrggbb pseudo
                 if (parts.length >= 4) {
                     try {
-                        int row       = Integer.parseInt(parts[1]);
-                        int col       = Integer.parseInt(parts[2]);
-                        Color couleur = Color.web(parts[3]);
+                        int row = Integer.parseInt(parts[1]);
+                        int col = Integer.parseInt(parts[2]);
+                        Color couleur = Color.web(parts[3]); //convertit #rrggbb en couleur javafx
                         boolean estMoi = parts.length >= 5 && parts[4].equals(monPseudo);
                         Platform.runLater(() -> {
                             if (grilleController != null)
@@ -117,9 +145,9 @@ public class NetworkClient {
                 //format state row col #rrggbb secondesrestantes
                 if (parts.length >= 5) {
                     try {
-                        int row              = Integer.parseInt(parts[1]);
-                        int col              = Integer.parseInt(parts[2]);
-                        Color couleur        = Color.web(parts[3]);
+                        int row  = Integer.parseInt(parts[1]);
+                        int col = Integer.parseInt(parts[2]);
+                        Color couleur = Color.web(parts[3]);
                         int secondesRestantes = Integer.parseInt(parts[4]);
                         Platform.runLater(() -> {
                             if (grilleController != null)
@@ -135,8 +163,8 @@ public class NetworkClient {
                 //format busy row col secondesrestantes
                 if (parts.length >= 4) {
                     try {
-                        int row      = Integer.parseInt(parts[1]);
-                        int col      = Integer.parseInt(parts[2]);
+                        int row = Integer.parseInt(parts[1]);
+                        int col = Integer.parseInt(parts[2]);
                         int secondes = Integer.parseInt(parts[3]);
                         Platform.runLater(() -> {
                             if (grilleController != null)
@@ -157,6 +185,10 @@ public class NetworkClient {
                 });
                 break;
 
+            case "CONNECTED":
+                //accuse de reception de connexion deja traite
+                break;
+
             default:
                 System.err.println("Message inconnu reçu : " + message);
                 break;
@@ -165,6 +197,7 @@ public class NetworkClient {
 
     //fermeture
 
+    //ferme connexion et arrete thread ecoute
     public void fermer() {
         connecte = false;
         try {
@@ -174,6 +207,15 @@ public class NetworkClient {
         }
     }
 
+    //fermeture sans afficher d'erreur (utilisee en cas de probleme de connexion initiale)
+    private void fermerSilencieusement() {
+        try {
+            if (socket != null) socket.close();
+        } catch (IOException ignored) {
+        }
+    }
+
+    //getter statut connexion
     public boolean isConnecte() {
         return connecte;
     }
@@ -182,9 +224,8 @@ public class NetworkClient {
 
     //convertit couleur javafx en #rrggbb
     private String couleurVersHex(Color c) {
-        return String.format("#%02X%02X%02X",
-            (int)(c.getRed()   * 255),
-            (int)(c.getGreen() * 255),
-            (int)(c.getBlue()  * 255));
+        return String.format("#%02X%02X%02X", (int)(c.getRed()   * 255), 
+                                                (int)(c.getGreen() * 255),
+                                                (int)(c.getBlue()  * 255));
     }
 }

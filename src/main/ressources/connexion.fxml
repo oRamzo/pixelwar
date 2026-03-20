@@ -21,11 +21,9 @@
                      -fx-border-radius: 8;
                      -fx-background-radius: 8;">
 
-            <!--titre page-->
             <Label text="Connexion"
                    style="-fx-font-size: 24px; -fx-font-weight: bold;"/>
 
-            <!--zone pseudo-->
             <VBox spacing="4">
                 <Label text="Pseudo"
                        style="-fx-font-size: 13px; -fx-text-fill: #444444;"/>
@@ -37,7 +35,6 @@
                        visible="false" managed="false"/>
             </VBox>
 
-                     <!--zone adresse serveur-->
             <VBox spacing="4">
                 <Label text="Adresse du serveur"
                        style="-fx-font-size: 13px; -fx-text-fill: #444444;"/>
@@ -49,7 +46,6 @@
                        visible="false" managed="false"/>
             </VBox>
 
-                     <!--zone port-->
             <VBox spacing="4">
                 <Label text="Port"
                        style="-fx-font-size: 13px; -fx-text-fill: #444444;"/>
@@ -61,13 +57,11 @@
                        visible="false" managed="false"/>
             </VBox>
 
-            <!--erreur globale ex serveur inaccessible-->
             <Label fx:id="erreurGenerale" text=""
                    style="-fx-text-fill: red; -fx-font-size: 12px; -fx-font-weight: bold;"
                    visible="false" managed="false"
                    wrapText="true" maxWidth="300"/>
 
-            <!--bouton connexion-->
             <Button fx:id="boutonConnexion"
                     text="Se connecter"
                     onAction="#handleConnexion"
