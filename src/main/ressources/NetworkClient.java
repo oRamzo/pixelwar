@@ -1,10 +1,9 @@
 import javafx.application.Platform;
 import javafx.scene.paint.Color;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 
@@ -15,8 +14,8 @@ public class NetworkClient {
     private static final int TIMEOUT_HANDSHAKE_MS = 3000;
 
     private Socket socket;
-    private PrintWriter out;
-    private BufferedReader in;
+    private ObjectOutputStream out;
+    private ObjectInputStream in;
 
     private GrilleController grilleController;
     private Thread threadEcoute; //thread qui ecoute le serveur en arriere plan
@@ -30,21 +29,24 @@ public class NetworkClient {
     public NetworkClient(String adresse, int port, String pseudo) throws IOException {
         try {
             socket = new Socket(adresse, port);
-            out = new PrintWriter(socket.getOutputStream(), true);
-            in  = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            out = new ObjectOutputStream(socket.getOutputStream());
+            out.flush();
+            in  = new ObjectInputStream(socket.getInputStream());
             connecte = true;
             monPseudo = pseudo;
 
             //identification serveur + attente validation
             socket.setSoTimeout(TIMEOUT_HANDSHAKE_MS);
-            envoyerMessage("CONNECT " + pseudo);
+            envoyerObjet("CONNECT " + pseudo);
 
-            String reponse = in.readLine();
-            if (reponse == null) {
-                throw new IOException("Connexion fermée par le serveur.");
+            Object reponseObjet = in.readObject();
+            if (!(reponseObjet instanceof String)) {
+                throw new IOException("Réponse inattendue du serveur.");
             }
+
+            String reponse = (String) reponseObjet;
             if (reponse.startsWith("ERROR ")) {
-                String erreur = reponse.substring("ERROR ".length()).trim(); //message d'erreur (en enlevant le prefixe "ERROR ")
+                String erreur = reponse.substring("ERROR ".length()).trim();
                 throw new IOException(erreur.isEmpty() ? "Connexion refusée par le serveur." : erreur);
             }
             if (!reponse.startsWith("CONNECTED")) {
@@ -56,6 +58,10 @@ public class NetworkClient {
             connecte = false;
             fermerSilencieusement();
             throw new IOException("Le serveur ne répond pas à la connexion.", e);
+        } catch (ClassNotFoundException e) {
+            connecte = false;
+            fermerSilencieusement();
+            throw new IOException("Objet réseau inconnu reçu du serveur.", e);
         } catch (IOException e) {
             connecte = false;
             fermerSilencieusement();
@@ -75,19 +81,25 @@ public class NetworkClient {
 
     //envoie demande coloriage au serveur
     public void envoyerPixel(int row, int col, Color couleur) {
-        envoyerMessage(String.format("PIXEL %d %d %s", row, col, couleurVersHex(couleur)));
+        envoyerObjet(Pixel.pixelDemande(row, col, couleurVersHex(couleur)));
     }
 
     //demande deconnexion propre
     public void deconnecter() {
-        envoyerMessage("DISCONNECT");
+        envoyerObjet("DISCONNECT");
         fermer();
     }
 
-    //envoi texte brut vers serveur
-    private void envoyerMessage(String message) {
+    //envoi objet vers serveur
+    private synchronized void envoyerObjet(Object objet) {
         if (out != null && connecte) {
-            out.println(message);
+            try {
+                out.writeObject(objet);
+                out.flush();
+                out.reset();
+            } catch (IOException e) {
+                connecte = false;
+            }
         }
     }
 
@@ -97,11 +109,11 @@ public class NetworkClient {
     private void demarrerEcoute() {
         threadEcoute = new Thread(() -> {
             try {
-                String ligne;
-                while (connecte && (ligne = in.readLine()) != null) {
-                    traiterMessage(ligne);
+                Object objet;
+                while (connecte && (objet = in.readObject()) != null) {
+                    traiterMessage(objet);
                 }
-            } catch (IOException e) {
+            } catch (IOException | ClassNotFoundException e) {
                 if (connecte) {
                     //deconnexion non prevue
                     Platform.runLater(() -> {
@@ -116,83 +128,88 @@ public class NetworkClient {
         threadEcoute.start();
     }
 
-    //parse puis redirige message serveur vers ui
-    private void traiterMessage(String message) {
-        String[] parts = message.split(" ");
-        if (parts.length == 0) return;
+    //redirige message serveur vers ui
+    private void traiterMessage(Object message) {
+        if (message instanceof Pixel) {
+            traiterPixel((Pixel) message);
+            return;
+        }
 
-        switch (parts[0]) {
+        if (message instanceof String) {
+            traiterTexte((String) message);
+            return;
+        }
 
-            case "UPDATE":
-                //format update row col #rrggbb pseudo
-                if (parts.length >= 4) {
-                    try {
-                        int row = Integer.parseInt(parts[1]);
-                        int col = Integer.parseInt(parts[2]);
-                        Color couleur = Color.web(parts[3]); //convertit #rrggbb en couleur javafx
-                        boolean estMoi = parts.length >= 5 && parts[4].equals(monPseudo);
-                        Platform.runLater(() -> {
-                            if (grilleController != null)
-                                grilleController.recevoirPixelDistant(row, col, couleur, estMoi);
-                        });
-                    } catch (Exception e) {
-                        System.err.println("Message UPDATE malformé : " + message);
-                    }
+        System.err.println("Objet inconnu reçu : " + message);
+    }
+
+    private void traiterPixel(Pixel pixel) {
+        switch (pixel.getType()) {
+            case UPDATE:
+                try {
+                    int row = pixel.getRow();
+                    int col = pixel.getCol();
+                    Color couleur = Color.web(pixel.getCouleurHex());
+                    boolean estMoi = pixel.getPseudo() != null && pixel.getPseudo().equals(monPseudo);
+                    Platform.runLater(() -> {
+                        if (grilleController != null)
+                            grilleController.recevoirPixelDistant(row, col, couleur, estMoi);
+                    });
+                } catch (Exception e) {
+                    System.err.println("Objet UPDATE malformé.");
                 }
                 break;
 
-            case "STATE":
-                //format state row col #rrggbb secondesrestantes
-                if (parts.length >= 5) {
-                    try {
-                        int row  = Integer.parseInt(parts[1]);
-                        int col = Integer.parseInt(parts[2]);
-                        Color couleur = Color.web(parts[3]);
-                        int secondesRestantes = Integer.parseInt(parts[4]);
-                        Platform.runLater(() -> {
-                            if (grilleController != null)
-                                grilleController.appliquerEtatInitialPixel(row, col, couleur, secondesRestantes);
-                        });
-                    } catch (Exception e) {
-                        System.err.println("Message STATE malformé : " + message);
-                    }
+            case STATE:
+                try {
+                    int row  = pixel.getRow();
+                    int col = pixel.getCol();
+                    Color couleur = Color.web(pixel.getCouleurHex());
+                    int secondesRestantes = pixel.getSecondesRestantes();
+                    Platform.runLater(() -> {
+                        if (grilleController != null)
+                            grilleController.appliquerEtatInitialPixel(row, col, couleur, secondesRestantes);
+                    });
+                } catch (Exception e) {
+                    System.err.println("Objet STATE malformé.");
                 }
                 break;
 
-            case "BUSY":
-                //format busy row col secondesrestantes
-                if (parts.length >= 4) {
-                    try {
-                        int row = Integer.parseInt(parts[1]);
-                        int col = Integer.parseInt(parts[2]);
-                        int secondes = Integer.parseInt(parts[3]);
-                        Platform.runLater(() -> {
-                            if (grilleController != null)
-                                grilleController.recevoirBusy(row, col, secondes);
-                        });
-                    } catch (Exception e) {
-                        System.err.println("Message BUSY malformé : " + message);
-                    }
+            case BUSY:
+                try {
+                    int row = pixel.getRow();
+                    int col = pixel.getCol();
+                    int secondes = pixel.getSecondesRestantes();
+                    Platform.runLater(() -> {
+                        if (grilleController != null)
+                            grilleController.recevoirBusy(row, col, secondes);
+                    });
+                } catch (Exception e) {
+                    System.err.println("Objet BUSY malformé.");
                 }
-                break;
-
-            case "ERROR":
-                //format error message libre
-                String erreur = message.substring("ERROR ".length());
-                Platform.runLater(() -> {
-                    if (grilleController != null)
-                        grilleController.afficherErreurReseau(erreur);
-                });
-                break;
-
-            case "CONNECTED":
-                //accuse de reception de connexion deja traite
                 break;
 
             default:
-                System.err.println("Message inconnu reçu : " + message);
+                System.err.println("Type de pixel inattendu reçu : " + pixel.getType());
                 break;
         }
+    }
+
+    private void traiterTexte(String message) {
+        if (message.startsWith("ERROR ")) {
+            String erreur = message.substring("ERROR ".length());
+            Platform.runLater(() -> {
+                if (grilleController != null)
+                    grilleController.afficherErreurReseau(erreur);
+            });
+            return;
+        }
+
+        if (message.startsWith("CONNECTED")) {
+            return;
+        }
+
+        System.err.println("Message texte inconnu reçu : " + message);
     }
 
     //fermeture
@@ -224,7 +241,7 @@ public class NetworkClient {
 
     //convertit couleur javafx en #rrggbb
     private String couleurVersHex(Color c) {
-        return String.format("#%02X%02X%02X", (int)(c.getRed()   * 255), 
+        return String.format("#%02X%02X%02X", (int)(c.getRed()   * 255),
                                                 (int)(c.getGreen() * 255),
                                                 (int)(c.getBlue()  * 255));
     }
