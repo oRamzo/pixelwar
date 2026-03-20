@@ -35,7 +35,6 @@ public class NetworkClient {
             connecte = true;
             monPseudo = pseudo;
 
-            //identification serveur + attente validation
             socket.setSoTimeout(TIMEOUT_HANDSHAKE_MS);
             envoyerObjet("CONNECT " + pseudo);
 
@@ -89,7 +88,7 @@ public class NetworkClient {
         envoyerObjet("DISCONNECT");
         fermer();
     }
-
+    
     //envoi objet vers serveur
     private synchronized void envoyerObjet(Object objet) {
         if (out != null && connecte) {
@@ -105,7 +104,7 @@ public class NetworkClient {
 
     //ecoute serveur
 
-    //lance thread qui lit messages tant que connecté
+    //lance thread qui lit messages tant que connecte
     private void demarrerEcoute() {
         threadEcoute = new Thread(() -> {
             try {
@@ -115,7 +114,6 @@ public class NetworkClient {
                 }
             } catch (IOException | ClassNotFoundException e) {
                 if (connecte) {
-                    //deconnexion non prevue
                     Platform.runLater(() -> {
                         if (grilleController != null) {
                             grilleController.setStatutConnecte(false);
@@ -124,7 +122,7 @@ public class NetworkClient {
                 }
             }
         });
-        threadEcoute.setDaemon(true); //thread s arrete avec appli
+        threadEcoute.setDaemon(true);
         threadEcoute.start();
     }
 
@@ -143,6 +141,7 @@ public class NetworkClient {
         System.err.println("Objet inconnu reçu : " + message);
     }
 
+    //traitement des differents types de messages serveur
     private void traiterPixel(Pixel pixel) {
         switch (pixel.getType()) {
             case UPDATE:
@@ -153,7 +152,7 @@ public class NetworkClient {
                     boolean estMoi = pixel.getPseudo() != null && pixel.getPseudo().equals(monPseudo);
                     Platform.runLater(() -> {
                         if (grilleController != null)
-                            grilleController.recevoirPixelDistant(row, col, couleur, estMoi);
+                            grilleController.recevoirPixelDistant(row, col, couleur, pixel.getPseudo(), estMoi);
                     });
                 } catch (Exception e) {
                     System.err.println("Objet UPDATE malformé.");
@@ -166,9 +165,10 @@ public class NetworkClient {
                     int col = pixel.getCol();
                     Color couleur = Color.web(pixel.getCouleurHex());
                     int secondesRestantes = pixel.getSecondesRestantes();
+                    String pseudo = pixel.getPseudo();
                     Platform.runLater(() -> {
                         if (grilleController != null)
-                            grilleController.appliquerEtatInitialPixel(row, col, couleur, secondesRestantes);
+                            grilleController.appliquerEtatInitialPixel(row, col, couleur, pseudo, secondesRestantes);
                     });
                 } catch (Exception e) {
                     System.err.println("Objet STATE malformé.");
@@ -180,9 +180,10 @@ public class NetworkClient {
                     int row = pixel.getRow();
                     int col = pixel.getCol();
                     int secondes = pixel.getSecondesRestantes();
+                    String pseudo = pixel.getPseudo();
                     Platform.runLater(() -> {
                         if (grilleController != null)
-                            grilleController.recevoirBusy(row, col, secondes);
+                            grilleController.recevoirBusy(row, col, pseudo, secondes);
                     });
                 } catch (Exception e) {
                     System.err.println("Objet BUSY malformé.");
@@ -195,6 +196,7 @@ public class NetworkClient {
         }
     }
 
+    //traitement des messages texte du serveur (erreurs, etc)
     private void traiterTexte(String message) {
         if (message.startsWith("ERROR ")) {
             String erreur = message.substring("ERROR ".length());
@@ -242,7 +244,7 @@ public class NetworkClient {
     //convertit couleur javafx en #rrggbb
     private String couleurVersHex(Color c) {
         return String.format("#%02X%02X%02X", (int)(c.getRed()   * 255),
-                                                (int)(c.getGreen() * 255),
-                                                (int)(c.getBlue()  * 255));
+                            (int)(c.getGreen() * 255),
+                            (int)(c.getBlue()  * 255));
     }
 }

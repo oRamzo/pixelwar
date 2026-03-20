@@ -10,16 +10,26 @@ import java.util.concurrent.ConcurrentHashMap;
 
 //serveur tcp principal du jeu pixel battle
 //run : java Server <port>
+//
+//client -> serveur
+//  connect <pseudo>
+//  pixel (objet Pixel de type PIXEL)
+//  disconnect
+//
+//serveur -> client
+//  connected <pseudo>
+//  pixel (objet Pixel de type UPDATE, STATE ou BUSY)
+//  error <message>
+
 public class Server {
 
-    //constantes
-    private static final int COOLDOWN_PIXEL_MS = 60000; //1 minute en millisecondes
+    private static final int COOLDOWN_PIXEL_MS = 60000;
     private static final int ATTENTE_LIBERATION_PSEUDO_MS = 1200;
 
-    //etat partage entre threads
     private final Map<String, ClientHandler> clients = new ConcurrentHashMap<>();
     private final Map<String, Long> pixelTimestamps = new ConcurrentHashMap<>();
     private final Map<String, String> pixelCouleurs = new ConcurrentHashMap<>();
+    private final Map<String, String> pixelProprietaires = new ConcurrentHashMap<>();
     private final Object etatLock = new Object();
 
     public void demarrer(int port) {
@@ -54,8 +64,14 @@ public class Server {
         return (int) ((COOLDOWN_PIXEL_MS - tempsEcoule) / 1000) + 1;
     }
 
-    private void reserverPixel(int row, int col) {
-        pixelTimestamps.put(clePixel(row, col), System.currentTimeMillis());
+    private void reserverPixel(int row, int col, String pseudo) {
+        String cle = clePixel(row, col);
+        pixelTimestamps.put(cle, System.currentTimeMillis());
+        pixelProprietaires.put(cle, pseudo);
+    }
+
+    private String proprietairePixel(int row, int col) {
+        return pixelProprietaires.get(clePixel(row, col));
     }
 
     private void envoyerEtatInitial(ClientHandler handler) {
@@ -66,7 +82,8 @@ public class Server {
                 int row = Integer.parseInt(coords[0]);
                 int col = Integer.parseInt(coords[1]);
                 int restant = secondesRestantes(row, col);
-                handler.envoyer(Pixel.pixelState(row, col, entry.getValue(), restant));
+                String pseudo = proprietairePixel(row, col);
+                handler.envoyer(Pixel.pixelState(row, col, entry.getValue(), pseudo, restant));
             } catch (NumberFormatException e) {
                 log("Coordonnees invalides dans l'etat initial : " + entry.getKey());
             }
@@ -143,7 +160,7 @@ public class Server {
                             break;
                         }
 
-                        if (pseudoDemande.matches(".*\\s+.*")) {
+                        if (pseudoDemande.matches(".*\s+.*")) {
                             envoyer("ERROR Le pseudo ne doit pas contenir d'espaces.");
                             break;
                         }
@@ -195,18 +212,22 @@ public class Server {
             String hex = pixel.getCouleurHex();
 
             int restant;
+            String proprietaire;
             Pixel update = null;
             synchronized (etatLock) {
                 restant = secondesRestantes(ligne, col);
                 if (restant <= 0) {
-                    reserverPixel(ligne, col);
+                    reserverPixel(ligne, col, pseudo);
                     pixelCouleurs.put(clePixel(ligne, col), hex);
                     update = Pixel.pixelUpdate(ligne, col, hex, pseudo);
+                    proprietaire = pseudo;
+                } else {
+                    proprietaire = proprietairePixel(ligne, col);
                 }
             }
 
             if (restant > 0) {
-                envoyer(Pixel.pixelBusy(ligne, col, restant));
+                envoyer(Pixel.pixelBusy(ligne, col, proprietaire, restant));
                 log("BUSY pixel (" + ligne + "," + col + ") pour " + pseudo
                     + " — " + restant + "s restantes");
             } else {

@@ -38,12 +38,12 @@ public class Pixel implements Serializable {
         return new Pixel(Type.UPDATE, row, col, couleurHex, pseudo, 0);
     }
 
-    public static Pixel pixelState(int row, int col, String couleurHex, int secondesRestantes) {
-        return new Pixel(Type.STATE, row, col, couleurHex, null, secondesRestantes);
+    public static Pixel pixelState(int row, int col, String couleurHex, String pseudo, int secondesRestantes) {
+        return new Pixel(Type.STATE, row, col, couleurHex, pseudo, secondesRestantes);
     }
 
-    public static Pixel pixelBusy(int row, int col, int secondesRestantes) {
-        return new Pixel(Type.BUSY, row, col, null, null, secondesRestantes);
+    public static Pixel pixelBusy(int row, int col, String pseudo, int secondesRestantes) {
+        return new Pixel(Type.BUSY, row, col, null, pseudo, secondesRestantes);
     }
 
     public Type getType() {
